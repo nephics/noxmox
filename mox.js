@@ -121,19 +121,23 @@ exports.createClient = function createClient(options) {
       response.headers = headers;
 
       // create file stream for reading the requested file
-      var ws = fs.createReadStream(filePath);
-      ws.on('open', function() {
+      var rs = fs.createReadStream(filePath);
+      rs.on('open', function() {
         request.emit('response', response);
       });
-      ws.on('error', function(ex) {
+      rs.on('error', function(ex) {
         request.emit('error', ex);
       });
-      ws.on('data', function(chunk) {
+      rs.on('data', function(chunk) {
         response.emit('data', chunk);
       });
-      ws.on('end', function() {
+      rs.on('end', function() {
         response.emit('end');
       });
+
+      // allow for pausing and resuming the response
+      response.pause = rs.pause;
+      response.resume = rs.resume;
     });
 
     request.write = request.end = function () {};
