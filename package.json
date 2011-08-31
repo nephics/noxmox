@@ -3,7 +3,7 @@
   "description": "Amazon S3 client and mock-up",
   "keywords": ["aws", "amazon", "s3", "mock-up"],
   "version": "0.1.1",
-  "author": "Jacob Sondergaard <jacob@nephics.com>",
+  "author": "nephics <jacob@nephics.com>",
   "main": "./index.js",
   "engines": { "node": ">= 0.4.11" },
   "repository": {
