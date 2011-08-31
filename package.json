@@ -1,0 +1,13 @@
+{
+  "name": "noxmox",
+  "description": "Amazon S3 client and mock-up",
+  "keywords": ["aws", "amazon", "s3", "mock-up"],
+  "version": "0.1.0",
+  "author": "Jacob Sondergaard <jacob@nephics.com>",
+  "main": "./index.js",
+  "engines": { "node": ">= 0.4.11" },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/nephics/noxmox.git"
+  }
+}
