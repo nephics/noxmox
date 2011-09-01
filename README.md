@@ -10,10 +10,10 @@ This library provides two node.js modules implementing the Amazon S3 REST API fu
 
 # Features
 
-* Very simple to learn and use, get started quickly with Amazon S3.
-* Completely interchangeable modules allowing for developing and testing offline, i.e. storing
+* Simple to learn and easy to use, get started quickly with Amazon S3.
+* Interchangeable modules allowing for developing and testing offline, i.e. storing
   files on the local file system, without using the S3 storage space.
-* Using node's native api via `http.client`.
+* The S3 client is just a simple wrapper around node's native `http.client` api.
 
 # Interface overview
 
@@ -98,16 +98,16 @@ Delete the file from S3:
       });
     });
    
-The `nox` and `mox` modules are completly interchangeable, so the above example
+In an actual implementation, the file data should be read and upload asynchronously in chunks, not
+synchronously as in this simple example.
+
+The `nox` and `mox` modules are interchangeable, so the above example
 can be repeated with `mox` replacing `nox` when creating the client. The file
 will then be stored on the local hard drive in the default location `/tmp/mox`.
 
-In a real implementation, the file data should be read and upload asynchronously in chunks, not
-synchronously as in this simple example.
-
 ## Advanced topics
 
-Make the uploaded file public on S3 by passing the header `'x-amz-acl':'private'` when calling `put()`.
+Make the uploaded file public on S3 by passing the header `'x-amz-acl':'public'` when calling `put()`.
 
 Change the default local storage location for `mox` using the option `prefix:<path>` for specifying the path to store files.
 
@@ -119,11 +119,12 @@ are Copyright (c) 2010 LearnBoost &lt;dev@learnboost.com&gt; and licensed under 
 
 Note: `nox` will unlike `knox` by default keep the uploaded files private, as is also the Amazon S3 default.
 
-## Licensing
+# License
 
-Licensed under the very permissive MIT License:
+Licensed under the MIT License:
 
 Copyright (c) 2011 Nephics AB
+Copyright (c) 2010 LearnBoost &lt;dev@learnboost.com&gt;
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
