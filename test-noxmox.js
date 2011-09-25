@@ -22,8 +22,8 @@ function runTests() {
       return;
     }
     var options = JSON.parse(data);
-    var noxclient = nox.createClient(options);
 
+    var noxclient = nox.createClient(options);
     console.log('Testing nox client');
     test(noxclient, function(){
       console.log('\nTesting mox client');
@@ -56,11 +56,11 @@ function test(client, callback) {
   
 
 function upload(client, name, buf, callback) {
+  console.log('\nFile upload');
   var req = client.put(name, {
     'Content-Type':'text/plain',
     'Content-Length':buf.length
   });
-  console.log('\nFile upload');
   req.on('error', function(err) {
     console.log(err.message || err);
   });
