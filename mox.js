@@ -176,6 +176,22 @@ exports.createClient = function createClient(options) {
     fs.readFile(filePath + '.meta', 'utf8', function(err, data) {
       if (err) {
         request.writable = false;
+        if (err.code === 'ENOENT') {
+          // no such file
+          var response = fakeReadableStream();
+          response.httpVersion = '1.1';
+          response.statusCode = 403;
+          response.headers = {
+            'content-type':'application/xml',
+            'transfer-encoding':'chunked',
+            'date':(new Date()).toUTCString(),
+            'server':'mox'
+          }
+          request.emit('response', response);
+          response.emit('data', '<?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied<Message></Error>');
+          response.emit('end');
+          return;
+        }
         request.emit('error', err);
         return;
       }
@@ -216,6 +232,21 @@ exports.createClient = function createClient(options) {
     fs.readFile(filePath + '.meta', 'utf8', function(err, data) {
       if (err) {
         request.writable = false;
+        if (err.code === 'ENOENT') {
+          // no such file
+          var response = fakeReadableStream();
+          response.httpVersion = '1.1';
+          response.statusCode = 403;
+          response.headers = {
+            'content-type':'application/xml',
+            'transfer-encoding':'chunked',
+            'date':(new Date()).toUTCString(),
+            'server':'mox'
+          }
+          request.emit('response', response);
+          response.emit('end');
+          return;
+        }
         request.emit('error', err);
         return;
       }
