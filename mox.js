@@ -35,7 +35,7 @@ function wrapReadableStream(rs) {
   
   rs.on('data', function(chunk) { self.emit('data', chunk); });
   rs.on('end', function() { self.readable = false; self.emit('end'); });
-  rs.on('error', function(err) { self.readable = false; self.emit('error', err); });
+  rs.on('error', function(err) { self.readable = false; });
   rs.on('close', function() { self.emit('close'); });
 
   return self;
@@ -56,12 +56,12 @@ function wrapWritableStream(ws) {
 
   self.writable = true;
   self.write = function(chunk, enc) { return ws.write(chunk, enc); };
-  self.end = function(chunk, enc) { self.writable = false; if (chunk) ws.end(chunk, enc); };
+  self.end = function(chunk, enc) { self.writable = false; if (chunk) self.write(chunk, enc); };
   self.destroy = function() { self.writable = false; ws.destroy(); }
   self.destroySoon = function() { self.writable = false; ws.destroySoon(); };
 
   ws.on('drain', function() { self.emit('drain'); });
-  ws.on('error', function(err) { self.emit('error', err); });
+  ws.on('error', function(err) { self.writeable = false; });
   ws.on('close', function() { self.emit('close'); });
   ws.on('pipe', function(src) { self.emit('pipe', src); });
 
@@ -103,19 +103,61 @@ exports.createClient = function createClient(options) {
   }
 
   
-  var client = new function() {};
+  function emitResponse(request, opts) {
+    if (request.responseEmitted) {
+      console.error('Response already emitted.')
+      return;
+    }
+    
+    var xml;
+    var response = opts.response || fakeReadableStream();
 
+    response.httpVersion = '1.1';
+    
+    response.headers = response.headers || (opts.headers || {});
+    response.headers.date = (new Date()).toUTCString();
+    response.headers['server'] = 'Mox';
+    response.headers['connection'] = 'close';
+
+    response.statusCode = opts.code || 200;
+    if (opts.err) {
+      opts.hasbody = true;
+      response.headers['content-type'] = 'application/xml';
+      response.headers['transfer-encoding'] = 'chunked';
+      xml = ['<?xml version="1.0" encoding="UTF-8"?><Error><Code>',
+      opts.err.code, '</Code><Message>', opts.err.msg, '<Message></Error>'].join('');
+    }
+    response.headers['content-length'] = response.headers['content-length'] || (xml && xml.length || 0);
+    
+    request.writable = false;
+    request.emit('response', response);
+    request.responseEmitted = true;
+    if (opts.err) {
+      response.emit('data', xml);
+    }
+    if (!opts.hasbody) {
+      response.emit('end');
+      response.readable = false;
+      response.emit('close');
+    }
+  }
+  
+  
+  var client = new function() {};
   
   client.put = function put(filename, headers) {
     var filePath = getFilePath(filename, true);
     var fileLength = 0;
     var md5 = crypto.createHash('md5');
-    // TODO handle copy and meta directives
     
     // create file stream to write the file data
     var ws = fs.createWriteStream(filePath);
     var request = wrapWritableStream(ws);
+
     ws.on('open', function() { request.emit('continue'); });
+    ws.on('error', function(err) {
+      emitResponse(request, {code:403, err:{code:'AccessDenied', msg:err.message}});
+    });
 
     // wrap request.write() to allow calculation of MD5 hash
     request._write = request.write;
@@ -140,25 +182,14 @@ exports.createClient = function createClient(options) {
         meta[key.toLowerCase()] = headers[key];
       });
 
+      console.log('meta ' + util.inspect(meta));
       fs.writeFile(filePath + '.meta', JSON.stringify(meta), 'utf8', function(err) {
         if (err) {
-          request.emit('error', err);
+          emitResponse(request, {code:403, err:{code:'AccessDenied', msg:err.message}});
           return;
         }
         // when all data is written, the response is emitted
-        var response = fakeReadableStream();
-        response.httpVersion = '1.1';
-        response.statusCode = 200;
-        response.headers = {
-          etag:headers.ETag,
-          date:headers.Date,
-          'content-length':'0',
-          server:'Mox'
-        };
-        request.emit('response', response);
-        response.emit('end');
-        response.readable = false;
-        response.emit('close');
+        emitResponse(request, {headers:{etag:headers.ETag}});
       });
     };
 
@@ -175,46 +206,30 @@ exports.createClient = function createClient(options) {
     // read meta data
     fs.readFile(filePath + '.meta', 'utf8', function(err, data) {
       if (err) {
-        request.writable = false;
         if (err.code === 'ENOENT') {
           // no such file
-          var response = fakeReadableStream();
-          response.httpVersion = '1.1';
-          response.statusCode = 403;
-          response.headers = {
-            'content-type':'application/xml',
-            'transfer-encoding':'chunked',
-            'date':(new Date()).toUTCString(),
-            'server':'mox'
-          }
-          request.emit('response', response);
-          response.emit('data', '<?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied<Message></Error>');
-          response.emit('end');
-          return;
+          emitResponse(request, {code:403, err:{code:'AccessDenied', msg:'Access Denied'}});
         }
-        request.emit('error', err);
+        else {
+          // other error
+          emitResponse(request, {code:500, err:{code:'InternalError', msg:err.message}});
+        }
         return;
       }
       
       // create file stream for reading the requested file
       var rs = fs.createReadStream(filePath);
       var response = wrapReadableStream(rs);
-      response.httpVersion = '1.1';
-      response.statusCode = 200;
-      var headers = JSON.parse(data);
-      headers['last-modified'] = headers['date'];
-      headers['date'] = (new Date()).toUTCString();
-      headers['server'] = 'Mox';
-      response.headers = headers;
+      response.headers = JSON.parse(data);
+      response.headers['last-modified'] = response.headers['date'];
 
       rs.on('open', function() {
         // file is ready, emit response
-        request.emit('response', response);
+        emitResponse(request, {response:response, hasbody:true}) 
       });
-      rs.on('error', function(ex) {
-        // emit file read error on the request
-        request.writable = false;
-        request.emit('error', ex);
+      rs.on('error', function(err) {
+        // emit response indicating the file read error
+        emitResponse(500, {code:'InternalError', msg:err.message});
       });
     });
 
@@ -224,45 +239,27 @@ exports.createClient = function createClient(options) {
   };
 
   
-  client.head = function(filename, headers) {
+  client.head = function head(filename, headers) {
     var request = fakeWritableStream();
     var filePath = getFilePath(filename);
 
     // read meta data
     fs.readFile(filePath + '.meta', 'utf8', function(err, data) {
       if (err) {
-        request.writable = false;
         if (err.code === 'ENOENT') {
           // no such file
-          var response = fakeReadableStream();
-          response.httpVersion = '1.1';
-          response.statusCode = 403;
-          response.headers = {
-            'content-type':'application/xml',
-            'transfer-encoding':'chunked',
-            'date':(new Date()).toUTCString(),
-            'server':'mox'
-          }
-          request.emit('response', response);
-          response.emit('end');
-          return;
+          emitResponse(request, {code:403, err:{code:'AccessDenied', msg:'Access Denied'}});
         }
-        request.emit('error', err);
+        else {
+          // other error
+          emitResponse(request, {code:500, err:{code:'InternalError', msg:err.message}});
+        }
         return;
       }
 
-      var response = fakeReadableStream();
-      response.httpVersion = '1.1';
-      response.statusCode = 200;
-      meta = JSON.parse(data);
-      meta['last-modified'] = meta['date'];
-      meta['date'] = (new Date()).toUTCString();
-      meta['server'] = 'Mox';
-      response.headers = meta;
-
-      request.emit('response', response);
-      response.emit('end');
-      response.emit('close');
+      headers = JSON.parse(data);
+      headers['last-modified'] = headers['date'];
+      emitResponse(request, {headers:headers});
     });
 
     request.abort = request.destroy;
@@ -278,30 +275,24 @@ exports.createClient = function createClient(options) {
     // remove the file
     fs.unlink(filePath, function(err) {
       if (err) {
-        request.writable = false;
-        request.emit('error', err);
+        if (err.code === 'ENOENT') {
+          // no such file
+          emitResponse(request, {code:403, err:{code:'AccessDenied', msg:'Access Denied'}});
+        }
+        else {
+          // other error
+          emitResponse(request, {code:500, err:{code:'InternalError', msg:err.message}});
+        }
         return;
       }
       // remove meta data file
       fs.unlink(filePath + '.meta', function(err) {
         if (err) {
-          request.writable = false;
-          request.emit('error', err);
+          emitResponse(request, {code:500, err:{code:'InternalError', msg:err.message}});
           return;
         }
         // when files are deleted, emit the response
-        var response = fakeReadableStream();
-        response.httpVersion = '1.1';
-        response.statusCode = 204;
-        response.headers = {
-          date:(new Date()).toUTCString(),
-          'content-length':'0',
-          server:'Mox',
-          connection:'close'
-        };
-        request.emit('response', response);
-        response.emit('end');
-        response.emit('close');
+        emitResponse(request, {code:204})
       });
     });
 

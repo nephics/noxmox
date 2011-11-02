@@ -23,12 +23,12 @@ function runTests() {
     }
     var options = JSON.parse(data);
 
-    var noxclient = nox.createClient(options);
-    console.log('Testing nox client');
-    test(noxclient, function(){
-      console.log('\nTesting mox client');
-      var moxclient = mox.createClient(options);
-      test(moxclient, function() {
+    console.log('\nTesting mox client');
+    var moxclient = mox.createClient(options);
+    test(moxclient, function() {
+      var noxclient = nox.createClient(options);
+      console.log('Testing nox client');
+      test(noxclient, function(){
         console.log('\nAll tests completed');
       });
     });
@@ -37,7 +37,7 @@ function runTests() {
 
 
 function test(client, callback) {
-  var name = 'test/2.txt';
+  var name = 'test-noxmox.txt';
   t1();
   function t1() {
     var buf = new Buffer('Testing the noxmox lib.');
@@ -50,7 +50,7 @@ function test(client, callback) {
     download(client, name, t4);
   }
   function t4() {
-    remove(client, name, callback)
+    remove(client, name, callback);
   }
 }
   
@@ -70,8 +70,11 @@ function upload(client, name, buf, callback) {
   req.on('response', function(res) {
     console.log('status code: ' + res.statusCode);
     console.log('headers: ' + util.inspect(res.headers));
+    res.on('data', function(chunk) {
+      console.log(chunk);
+    });
     res.on('end', function() {
-      console.log('Request finished');
+      console.log('Response finished');
       if (res.statusCode === 200) callback();
     });
   });
@@ -87,8 +90,11 @@ function stat(client, name, callback) {
   req.on('response', function(res) {
     console.log('status code: ' + res.statusCode);
     console.log('headers: ' + util.inspect(res.headers));
+    res.on('data', function(chunk) {
+      console.log(chunk);
+    });
     res.on('end', function() {
-      console.log('Request finished');
+      console.log('Response finished');
       if (res.statusCode === 200) callback();
     });
   });
@@ -126,8 +132,11 @@ function remove(client, name, callback) {
   req.on('response', function(res) {
     console.log('status code: ' + res.statusCode);
     console.log('headers: ' + util.inspect(res.headers));
+    res.on('data', function(chunk) {
+      console.log(chunk);
+    });
     res.on('end', function() {
-      console.log('Request finished');
+      console.log('Response finished');
       if (res.statusCode === 204) callback();
     });
   });
