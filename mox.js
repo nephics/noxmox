@@ -121,7 +121,6 @@ exports.createClient = function createClient(options) {
 
     response.statusCode = opts.code || 200;
     if (opts.err) {
-      opts.hasbody = true;
       response.headers['content-type'] = 'application/xml';
       response.headers['transfer-encoding'] = 'chunked';
       xml = ['<?xml version="1.0" encoding="UTF-8"?><Error><Code>',
