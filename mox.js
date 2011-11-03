@@ -181,7 +181,6 @@ exports.createClient = function createClient(options) {
         meta[key.toLowerCase()] = headers[key];
       });
 
-      console.log('meta ' + util.inspect(meta));
       fs.writeFile(filePath + '.meta', JSON.stringify(meta), 'utf8', function(err) {
         if (err) {
           emitResponse(request, {code:403, err:{code:'AccessDenied', msg:err.message}});

@@ -2,7 +2,7 @@
   "name": "noxmox",
   "description": "Amazon S3 client and mock-up",
   "keywords": ["aws", "amazon", "s3", "mock-up"],
-  "version": "0.1.6",
+  "version": "0.1.7",
   "author": "nephics <jacob@nephics.com>",
   "main": "./index.js",
   "engines": { "node": ">= 0.4.11" },
