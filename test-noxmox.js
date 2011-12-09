@@ -8,6 +8,7 @@
 // The JSON file shall contain an object with the aws key, secret and bucketname.
 
 var fs = require('fs');
+var crypto = require('crypto');
 var util = require('util');
 
 var nox = require('./nox.js');
@@ -59,7 +60,8 @@ function upload(client, name, buf, callback) {
   console.log('\nFile upload');
   var req = client.put(name, {
     'Content-Type':'text/plain',
-    'Content-Length':buf.length
+    'Content-Length':buf.length,
+    'Content-MD5': crypto.createHash('md5').update(buf).digest('base64')
   });
   req.on('error', function(err) {
     console.log(err.message || err);
