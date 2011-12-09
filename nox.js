@@ -56,6 +56,7 @@ exports.createClient = function(options) {
       date:date,
       resource:auth.canonicalizeResource(path.join('/', options.bucket, filename)),
       contentType:headers['Content-Type'],
+      md5:headers['Content-MD5'],
       amazonHeaders:auth.canonicalizeHeaders(headers)
     });
 
