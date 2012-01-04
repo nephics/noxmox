@@ -10,6 +10,7 @@
 var fs = require('fs');
 var crypto = require('crypto');
 var util = require('util');
+var assert = require('assert');
 
 var nox = require('./nox.js');
 var mox = require('./mox.js');
@@ -28,7 +29,7 @@ function runTests() {
     var moxclient = mox.createClient(options);
     test(moxclient, function() {
       var noxclient = nox.createClient(options);
-      console.log('Testing nox client');
+      console.log('\nTesting nox client');
       test(noxclient, function(){
         console.log('\nAll tests completed');
       });
@@ -51,10 +52,30 @@ function test(client, callback) {
     download(client, name, t4);
   }
   function t4() {
-    remove(client, name, callback);
+    remove(client, name, t5);
+  }
+  function t5() {
+    statRemoved(client, name, t6);
+  }
+  function t6() {
+    downloadRemoved(client, name, t7);
+  }
+  function t7() {
+    removeRemoved(client, name, callback);
   }
 }
-  
+
+function logErrors(req) {
+  req.on('error', function(err) {
+    console.log(err.message || err);
+  });
+}
+
+function logResponse(res) {
+  console.log('status code: ' + res.statusCode);
+  console.log('headers: ' + util.inspect(res.headers));
+}
+
 
 function upload(client, name, buf, callback) {
   console.log('\nFile upload');
@@ -63,21 +84,19 @@ function upload(client, name, buf, callback) {
     'Content-Length':buf.length,
     'Content-MD5': crypto.createHash('md5').update(buf).digest('base64')
   });
-  req.on('error', function(err) {
-    console.log(err.message || err);
-  });
+  logErrors(req);
   req.on('continue', function() {
     req.end(buf);
   });
   req.on('response', function(res) {
-    console.log('status code: ' + res.statusCode);
-    console.log('headers: ' + util.inspect(res.headers));
+    logResponse(res);
     res.on('data', function(chunk) {
       console.log(chunk);
     });
     res.on('end', function() {
       console.log('Response finished');
-      if (res.statusCode === 200) callback();
+      assert.equal(res.statusCode, 200);
+      callback();
     });
   });
 }
@@ -85,40 +104,73 @@ function upload(client, name, buf, callback) {
 
 function stat(client, name, callback) {
   var req = client.head(name);
-  req.on('error', function(err) {
-    console.log(err.message || err);
-  });
+  logErrors(req);
   console.log('\nFile stat');
   req.on('response', function(res) {
-    console.log('status code: ' + res.statusCode);
-    console.log('headers: ' + util.inspect(res.headers));
+    logResponse(res);
     res.on('data', function(chunk) {
       console.log(chunk);
     });
     res.on('end', function() {
       console.log('Response finished');
-      if (res.statusCode === 200) callback();
+      assert.equal(res.statusCode, 200);
+      callback();
     });
   });
   req.end();
 }
 
+
+function statRemoved(client, name, callback) {
+  var req = client.head(name);
+  logErrors(req);
+  console.log('\nNonexistent file stat');
+  req.on('response', function(res) {
+    logResponse(res);
+    res.on('data', function(chunk) {
+      console.log(chunk);
+    });
+    res.on('end', function() {
+      console.log('Response finished');
+      assert.equal(res.statusCode, 404);
+      callback();
+    });
+  });
+  req.end();
+}
+
+
 function download(client, name, callback) {
   var req = client.get(name);
-  req.on('error', function(err) {
-    console.log(err.message || err);
-  });
+  logErrors(req);
   console.log('\nFile download');
   req.on('response', function(res) {
-    console.log('status code: ' + res.statusCode);
-    console.log('headers: ' + util.inspect(res.headers));
+    logResponse(res);
     var len = 0;
     res.on('data', function(chunk) {
       len += chunk.length;
     });
     res.on('end', function() {
       console.log('Downloaded ' + len + ' bytes of file data');
-      if (res.statusCode === 200) callback();
+      assert.equal(res.statusCode, 200);
+      callback();
+    });
+  });
+  req.end();
+}
+
+function downloadRemoved(client, name, callback) {
+  var req = client.get(name);
+  logErrors(req);
+  console.log('\nNonexistent file download');
+  req.on('response', function(res) {
+    logResponse(res);
+    res.on('data', function(chunk) {
+      console.log(chunk.toString());
+    });
+    res.on('end', function() {
+      assert.equal(res.statusCode, 404);
+      callback();
     });
   });
   req.end();
@@ -127,20 +179,25 @@ function download(client, name, callback) {
 
 function remove(client, name, callback) {
   var req = client.del(name);
-  req.on('error', function(err) {
-    console.log(err.message || err);
-  });
+  logErrors(req);
   console.log('\nFile delete');
   req.on('response', function(res) {
-    console.log('status code: ' + res.statusCode);
-    console.log('headers: ' + util.inspect(res.headers));
+    logResponse(res);
     res.on('data', function(chunk) {
       console.log(chunk);
     });
     res.on('end', function() {
       console.log('Response finished');
-      if (res.statusCode === 204) callback();
+      assert.equal(res.statusCode, 204);
+      callback();
     });
   });
   req.end();
+}
+
+
+function removeRemoved(client, name, callback) {
+  // Trying to removing a nonexistent file, looks the same
+  // as removing an existent file (status code 204).
+  remove(client, name, callback);
 }

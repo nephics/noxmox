@@ -206,7 +206,7 @@ exports.createClient = function createClient(options) {
       if (err) {
         if (err.code === 'ENOENT') {
           // no such file
-          emitResponse(request, {code:403, err:{code:'AccessDenied', msg:'Access Denied'}});
+          emitResponse(request, {code:404, err:{code:'NoSuchKey', msg:'The specified key does not exist.'}});
         }
         else {
           // other error
@@ -246,7 +246,7 @@ exports.createClient = function createClient(options) {
       if (err) {
         if (err.code === 'ENOENT') {
           // no such file
-          emitResponse(request, {code:403, err:{code:'AccessDenied', msg:'Access Denied'}});
+          emitResponse(request, {code:404, err:{code:'NoSuchKey', msg:'The specified key does not exist.'}});
         }
         else {
           // other error
@@ -272,20 +272,14 @@ exports.createClient = function createClient(options) {
     
     // remove the file
     fs.unlink(filePath, function(err) {
-      if (err) {
-        if (err.code === 'ENOENT') {
-          // no such file
-          emitResponse(request, {code:403, err:{code:'AccessDenied', msg:'Access Denied'}});
-        }
-        else {
-          // other error
-          emitResponse(request, {code:500, err:{code:'InternalError', msg:err.message}});
-        }
+      // ignore "no such file" errors
+      if (err && err.code !== 'ENOENT') {
+        emitResponse(request, {code:500, err:{code:'InternalError', msg:err.message}});
         return;
       }
       // remove meta data file
       fs.unlink(filePath + '.meta', function(err) {
-        if (err) {
+        if (err && err.code !== 'ENOENT') {
           emitResponse(request, {code:500, err:{code:'InternalError', msg:err.message}});
           return;
         }
