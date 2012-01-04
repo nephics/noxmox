@@ -109,6 +109,15 @@ exports.createClient = function(options) {
     return url;
   };
 
+  client.url =
+  client.http = function(filename){
+    return 'http://' + path.join(this.endpoint, this.bucket, filename);
+  };
+
+  client.https = function(filename){
+    return 'https://' + path.join(this.endpoint, filename);
+  };
+
   return client;
 };
 

@@ -293,5 +293,14 @@ exports.createClient = function createClient(options) {
     return request;
   };
 
+  client.url =
+  client.http = function(filename){
+    return (filename)
+  };
+
+  client.https = function(filename){
+    return (filename)
+  };
+
   return client;
 };
