@@ -77,13 +77,13 @@ exports.createClient = function createClient(options) {
   }
 
   // create storage dir, if it doesn't exists
-  if (!path.existsSync(options.prefix)) {
+  if (!fs.existsSync(options.prefix)) {
     fs.mkdirSync(options.prefix, 0777);
   }
   
   // create bucket dir, if it does not exists
   var bucketPath = path.join(options.prefix, options.bucket);
-  if (!path.existsSync(bucketPath)) {
+  if (!fs.existsSync(bucketPath)) {
     fs.mkdirSync(bucketPath, 0777);
   }
 
@@ -94,7 +94,7 @@ exports.createClient = function createClient(options) {
       // ensure that the path to the file exists
       createRecursive(path.dirname(filePath));
       function createRecursive(p) {
-        if (path.existsSync(p) || p === bucketPath) return;
+        if (fs.existsSync(p) || p === bucketPath) return;
         createRecursive(path.join(p, '..'));
         fs.mkdirSync(p, 0777);
       }
