@@ -1,7 +1,7 @@
 
 // mox - S3 mock-up for node.js
 //
-// Copyright(c) 2011 Nephics AB
+// Copyright(c) 2011-2012 Nephics AB
 // MIT Licensed
 //
 
@@ -70,8 +70,17 @@ function wrapWritableStream(ws) {
 
 exports.createClient = function createClient(options) {
 
+  var bucket;
+  
   if (!options.bucket) throw new Error('aws "bucket" required');
   
+  if (options.bucket.match(/\.amazonaws.com$/)) {
+    bucket = options.bucket.match(/(.*)\.([\w\-]+)\.amazonaws\.com$/)[1];
+  }
+  else {
+    bucket = options.bucket;
+  }
+
   if (!options.prefix) {
     options.prefix = '/tmp/mox';
   }
@@ -82,7 +91,7 @@ exports.createClient = function createClient(options) {
   }
   
   // create bucket dir, if it does not exists
-  var bucketPath = path.join(options.prefix, options.bucket);
+  var bucketPath = path.join(options.prefix, bucket);
   if (!fs.existsSync(bucketPath)) {
     fs.mkdirSync(bucketPath, 0777);
   }
