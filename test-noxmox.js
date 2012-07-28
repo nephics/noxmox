@@ -1,11 +1,9 @@
 
 //
-// Copyright(c) 2011 Nephics AB
+// Copyright(c) 2011-2012 Nephics AB
 // MIT Licensed
 //
 
-// To run the tests you will need a file called awsauth.json in the parent path.
-// The JSON file shall contain an object with the aws key, secret and bucketname.
 
 var fs = require('fs');
 var crypto = require('crypto');
@@ -15,24 +13,69 @@ var assert = require('assert');
 var nox = require('./nox.js');
 var mox = require('./mox.js');
 
-runTests();
 
-function runTests() {
-  fs.readFile('../awsauth.json', 'utf8', function(err, data) {
-    if (err) {
-      console.log(err.message);
-      return;
-    }
-    var options = JSON.parse(data);
+// Read aws auth data from stdin or cmd line argument, and run the tests
+(function readAuthData() {
+  var data = [];
+  var timeout;
+  
+  if (process.argv.length >= 3) {
+    // read from filename given as argument
 
-    console.log('\nTesting mox client');
-    var moxclient = mox.createClient(options);
-    test(moxclient, function() {
-      var noxclient = nox.createClient(options);
-      console.log('\nTesting nox client');
-      test(noxclient, function(){
-        console.log('\nAll tests completed');
-      });
+    fs.readFile(process.argv[2], 'utf8', function(err, data) {
+      if (err) {
+        console.log('Failed to read file ' + process.argv[2] + ', error: ' +
+            err);
+      }
+      else runTests(data);
+    });
+  }
+  else {
+    // try to read from stdin, bail out if no data after 100ms
+    
+    timeout = setTimeout(function() {
+      if (!data.length) failed();
+    }, 100);
+    
+    process.stdin.resume();
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', function (chunk) {
+      data.push(chunk);
+    });
+    process.stdin.on('end', function () {
+      runTests(data.join(''));
+    });
+    process.stdin.on('error', failed);
+  }
+  
+  function failed() {
+    console.log(['To run the tests you will need to supply JSON ',
+      'encoded object with the aws key, secret and bucketname.\n',
+      'Example calls:\n\n',
+      '   cat aws_auth.json | ', process.argv[0], ' ', process.argv[1], '\n\n',
+      '   ', process.argv[0], ' ', process.argv[1], ' aws_auth.json\n']
+      .join(''));
+    process.exit(1);
+  }
+}());
+
+
+function runTests(data) {
+  var options;
+  try {
+    options = JSON.parse(data);
+  }
+  catch (e) {
+    console.log('Failed to parse input as JSON data');
+    process.exit(1);
+  }
+  console.log('\nTesting mox client');
+  var moxclient = mox.createClient(options);
+  test(moxclient, function() {
+    var noxclient = nox.createClient(options);
+    console.log('\nTesting nox client');
+    test(noxclient, function(){
+      console.log('\nAll tests completed');
     });
   });
 }
@@ -95,6 +138,15 @@ function upload(client, name, buf, callback) {
     });
     res.on('end', function() {
       console.log('Response finished');
+      if (res.statusCode === 404) {
+        console.log('Failed to upload file, make sure the test bucket exists!');
+        process.exit(2);
+      }
+      if (res.statusCode === 307) {
+        console.log('Failed to upload file to bucket in non-standard region, make sure to include the endpoint in the bucket name: ' +
+            res.headers.location.match(/\/\/(.*\.amazonaws\.com).*/)[1]);
+        process.exit(3);
+      }
       assert.equal(res.statusCode, 200);
       callback();
     });

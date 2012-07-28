@@ -107,6 +107,19 @@ will then be stored on the local hard drive in the default location `/tmp/mox`.
 
 ## Advanced topics
 
+
+### Buckets in non-default regions
+
+To access a bucket in a non-default region (that is any region outside US East), the full endpoint should be included in the options passed to the `nox` client. 
+
+Trying to access a bucket in a non-default region, without specifying the endpoint as part of the bucket name, will result in a 307 redirect with the bucket endpoint given in the Location header.
+
+Example bucket name including endpoint, for a bucket in the EU West region:
+
+      a-test-bucket.s3-external-3.amazonaws.com
+
+
+### Make uploaded file public
 Make the uploaded file public on S3 by passing the header `'x-amz-acl':'public'` when calling `put()`.
 
 Change the default local storage location for `mox` using the option `prefix:<path>` for specifying the path to store files.
@@ -123,8 +136,7 @@ Note: `nox` will unlike `knox` by default keep the uploaded files private, as is
 
 Licensed under the MIT License:
 
-Copyright (c) 2011 Nephics AB
-
+Copyright (c) 2011-2012 Nephics AB  
 Copyright (c) 2010 LearnBoost &lt;dev@learnboost.com&gt;
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:

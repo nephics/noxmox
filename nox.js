@@ -1,7 +1,7 @@
 
 // nox - S3 Client for node.js
 //
-// Copyright(c) 2011 Nephics AB
+// Copyright(c) 2011-2012 Nephics AB
 // MIT Licensed
 //
 // Some code parts derived from knox:
@@ -30,13 +30,25 @@ function merge(a, b) {
 // Required options:
 //      key: aws key
 //   secret: aws secret
-//   bucket: aws bucket name
+//   bucket: aws bucket name (may include the endpoint)
 exports.createClient = function(options) {
   if (!options.key) throw new Error('aws "key" required');
   if (!options.secret) throw new Error('aws "secret" required');
   if (!options.bucket) throw new Error('aws "bucket" required');
 
-  var endpoint = options.bucket + '.s3.amazonaws.com';
+  var bucket;
+  var endpoint;
+  
+  if (options.bucket.match(/\.amazonaws\.com$/)) {
+    // bucket includes the endpoint
+    endpoint = options.bucket;
+    bucket = options.bucket.match(/(.*)\.([\w\-]+)\.amazonaws\.com$/)[1];
+  }
+  else {
+    // assume default endpoint
+    bucket = options.bucket;
+    endpoint = bucket + '.s3.amazonaws.com';
+  }
 
   function request(method, filename, headers) {
     var date = new Date;
@@ -54,7 +66,7 @@ exports.createClient = function(options) {
       secret:options.secret,
       verb:method,
       date:date,
-      resource:auth.canonicalizeResource(path.join('/', options.bucket, filename)),
+      resource:auth.canonicalizeResource(path.join('/', bucket, filename)),
       contentType:headers['Content-Type'],
       md5:headers['Content-MD5'],
       amazonHeaders:auth.canonicalizeHeaders(headers)
@@ -98,7 +110,7 @@ exports.createClient = function(options) {
     var signature = auth.signQuery({
       secret:options.secret,
       date:epoch,
-      resource:'/' + options.bucket + url.parse(filename).pathname
+      resource:'/' + bucket + url.parse(filename).pathname
     });
 
     var url = 'http://' + path.join(endpoint, filename) +
