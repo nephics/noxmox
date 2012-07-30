@@ -1,4 +1,3 @@
-
 // nox - S3 Client for node.js
 //
 // Copyright(c) 2011-2012 Nephics AB
@@ -113,12 +112,12 @@ exports.createClient = function(options) {
       resource:'/' + bucket + url.parse(filename).pathname
     });
 
-    var url = 'http://' + path.join(endpoint, filename) +
+    var _url = 'http://' + path.join(endpoint, filename) +
       '?Expires=' + epoch +
       '&AWSAccessKeyId=' + options.key +
       '&Signature=' + encodeURIComponent(signature);
 
-    return url;
+    return _url;
   };
 
   client.url =
