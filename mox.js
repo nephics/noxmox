@@ -56,12 +56,12 @@ function wrapWritableStream(ws) {
 
   self.writable = true;
   self.write = function(chunk, enc) { return ws.write(chunk, enc); };
-  self.end = function(chunk, enc) { self.writable = false; if (chunk) self.write(chunk, enc); };
+  self.end = function(chunk, enc) { self.writable = false; if (chunk) self.write(chunk, enc); ws.end() };
   self.destroy = function() { self.writable = false; ws.destroy(); }
   self.destroySoon = function() { self.writable = false; ws.destroySoon(); };
 
   ws.on('drain', function() { self.emit('drain'); });
-  ws.on('error', function(err) { self.writeable = false; });
+  ws.on('error', function(err) { self.writable = false; });
   ws.on('close', function() { self.emit('close'); });
   ws.on('pipe', function(src) { self.emit('pipe', src); });
 
