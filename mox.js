@@ -61,7 +61,7 @@ function wrapWritableStream(ws) {
   self.destroySoon = function() { self.writable = false; ws.destroySoon(); };
 
   ws.on('drain', function() { self.emit('drain'); });
-  ws.on('error', function(err) { self.writeable = false; });
+  ws.on('error', function(err) { self.writable = false; });
   ws.on('close', function() { self.emit('close'); });
   ws.on('pipe', function(src) { self.emit('pipe', src); });
 
