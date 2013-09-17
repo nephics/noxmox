@@ -82,7 +82,11 @@ exports.createClient = function createClient(options) {
   }
 
   if (!options.prefix) {
-    options.prefix = '/tmp/mox';
+    if (process.platform === "win32") {
+      options.prefix = process.env["TEMP"] + "/mox";
+    } else {
+      options.prefix = '/tmp/mox';
+    }
   }
 
   // create storage dir, if it doesn't exists
@@ -303,12 +307,12 @@ exports.createClient = function createClient(options) {
   };
 
   client.url =
-  client.http = function(filename){
-    return (filename)
+  client.http = function(filename) {
+    return (options.domain || '').replace("https:","http:") + filename;
   };
 
   client.https = function(filename){
-    return (filename)
+    return (options.domain || '').replace("http:", "https:") + filename;
   };
 
   return client;
