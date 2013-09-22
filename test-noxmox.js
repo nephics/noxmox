@@ -82,7 +82,7 @@ function runTests(data) {
 
 
 function test(client, callback) {
-  var name = 'test-noxmox.txt';
+  var name = 'test/noxmox.txt';
   t1();
   function t1() {
     var buf = new Buffer('Testing the noxmox lib.');
