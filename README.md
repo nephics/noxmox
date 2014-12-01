@@ -74,10 +74,10 @@ The file data can be retrieved again with the following code:
     req.end();
     req.on('response', function(res) {
       var chunks = [];
-      req.on('data', function(chunk) {
+      res.on('data', function(chunk) {
         chunks.push(chunk);
       });
-      req.on('end', function() {
+      res.on('end', function() {
         var data = chunks.join('');
         console.log('Retrieved ' + data.length + ' bytes of file data');
       });
