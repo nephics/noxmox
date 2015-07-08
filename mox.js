@@ -101,20 +101,49 @@ exports.createClient = function createClient(options) {
   }
 
   // map S3 keyname to filename
-  function getFilePath(keyname, newFile) {
+  function getFilePath(filePath, newFile) {
     // Backward incompatible (version <= 0.2.3) check for existing file
     if (!newFile) {
-      var oldFilePath = path.join(bucketPath, keyname);
+      var oldFilePath = path.join(bucketPath, filePath);
       if (fs.existsSync(oldFilePath)) {
         return oldFilePath;
       }
     }
-    // The new naming scheme:
-    // encode keyname using the fixedEncodeURIComponent from
-    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent
-    var filename = encodeURIComponent(keyname).replace(
-      /[!'()]/g, escape).replace(/\*/g, "%2A");
-    return path.join(bucketPath, filename);
+
+    // Isolate each part of the file path
+    filePath = filePath.split('/');
+    if (filePath[0].length === 0) {
+      filePath.shift();
+    }
+
+    // Encode each part
+    filePath = filePath.map(function(section) {
+      // The new naming scheme:
+      // encode filePath using the fixedEncodeURIComponent from
+      // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent
+      return encodeURIComponent(section)
+        .replace(/[!'()]/g, escape)
+        .replace(/\*/g, "%2A");
+    });
+
+    var fileName = filePath.pop();
+
+    // Ensure the path exists, then recombine
+    var tmp = '/';
+    filePath.forEach(function(el) {
+      tmp = path.join(tmp, el);
+
+      try {
+        fs.mkdirSync(path.join(bucketPath, tmp));
+      } catch (e) {
+        if (e.code !== 'EEXIST') {
+          throw e;
+        }
+      }
+    });
+    filePath = filePath.join('/');
+
+    return path.join(bucketPath, filePath, fileName);
   }
 
   function emitResponse(request, opts) {
