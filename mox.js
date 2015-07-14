@@ -116,17 +116,10 @@ exports.createClient = function createClient(options) {
       filePath.shift();
     }
 
-    // Encode each part
-    filePath = filePath.map(function(section) {
-      // The new naming scheme:
-      // encode filePath using the fixedEncodeURIComponent from
-      // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent
-      return encodeURIComponent(section)
+    var fileName = filePath.pop();
+    fileName = encodeURIComponent(fileName)
         .replace(/[!'()]/g, escape)
         .replace(/\*/g, "%2A");
-    });
-
-    var fileName = filePath.pop();
 
     // Ensure the path exists, then recombine
     var tmp = '/';
